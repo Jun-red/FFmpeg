@@ -1,0 +1,88 @@
+1.如果fopen安全问题，那么 https://www.cnblogs.com/longlyseul/p/12600625.html
+#define _CRT_SECURE_NO_DEPRECATE
+2.如果是SDL_Init的参数为已被隐藏的标识符，那么加入头文件#include<winsock2.h>
+3.
+extern "C"
+{
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libswscale/swscale.h"
+#include "libavutil/imgutils.h"
+};
+/*
+  https://www.cnblogs.com/jiu0821/p/11406029.html
+  IX_FMT_YUV420P -> AV_PIX_FMT_YUV420P
+
+
+'AVStream::codec': 被声明为已否决:
+if(pFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_VIDEO){
+=>
+if(pFormatCtx->streams[i]->codecpar->codec_type==AVMEDIA_TYPE_VIDEO){
+
+
+'AVStream::codec': 被声明为已否决:
+pCodecCtx = pFormatCtx->streams[videoindex]->codec;
+=>
+pCodecCtx = avcodec_alloc_context3(NULL);
+avcodec_parameters_to_context(pCodecCtx, pFormatCtx->streams[videoindex]->codecpar);
+
+
+'avpicture_get_size': 被声明为已否决:
+avpicture_get_size(AV_PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height)
+=>
+#include "libavutil/imgutils.h"
+av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height, 1)
+
+
+'avpicture_fill': 被声明为已否决:
+avpicture_fill((AVPicture *)pFrameYUV, out_buffer, AV_PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height);
+=>
+av_image_fill_arrays(pFrameYUV->data, pFrameYUV->linesize, out_buffer, AV_PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height, 1);
+
+
+'avcodec_decode_video2': 被声明为已否决:
+ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture, packet); //got_picture_ptr Zero if no frame could be decompressed
+=>
+ret = avcodec_send_packet(pCodecCtx, packet);
+got_picture = avcodec_receive_frame(pCodecCtx, pFrame); //got_picture = 0 success, a frame was returned
+//注意：got_picture含义相反
+或者：
+int ret = avcodec_send_packet(aCodecCtx, &pkt);
+if (ret != 0)
+{
+prinitf("%s/n","error");
+return;
+}
+while( avcodec_receive_frame(aCodecCtx, &frame) == 0){
+//读取到一帧音频或者视频
+//处理解码后音视频 frame
+}
+
+'av_free_packet': 被声明为已否决:
+av_free_packet(packet);
+=>
+av_packet_unref(packet);
+ 
+ 
+avcodec_decode_audio4：被声明为已否决：
+int ret = avcodec_send_packet(aCodecCtx, &pkt);
+if (ret != 0){prinitf("%s/n","error");}
+while( avcodec_receive_frame(aCodecCtx, &frame) == 0){
+//读取到一帧音频或者视频
+//处理解码后音视频 frame
+
+*/
+/*
+https://blog.csdn.net/u014162133/article/details/81239713
+  https://blog.csdn.net/leixiaohua1020/article/details/44305697
+  libswscale常用的函数数量很少，一般情况下就3个:
+		sws_getContext()：初始化一个SwsContext。
+		sws_scale()：处理图像数据。
+		sws_freeContext()：释放一个SwsContext。
+		注： sws_getContext()也可以用sws_getCachedContext()取代。
+		們可以把sws_getContext() 看成初始化函數，把sws_freeContext()看成結束函數。這兩個函數分別在起始及結束各執行一次即可。
+
+真正主要的函數，是sws_scale()。
+ */
+
+
